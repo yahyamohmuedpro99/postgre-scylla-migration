@@ -1,0 +1,11 @@
+# Use the official ScyllaDB image from the Docker Hub
+FROM scylladb/scylla:4.5.1
+
+# Add a CQL script to initialize the keyspace and tables
+COPY init.cql /init.cql
+
+# Start ScyllaDB, wait for it to be ready, and initialize the schema
+CMD ["sh", "-c", "scylla --developer-mode 1 & \
+                   until cqlsh -e 'describe cluster'; do sleep 1; done && \
+                   cqlsh -f /init.cql && \
+                   tail -f /dev/null"]

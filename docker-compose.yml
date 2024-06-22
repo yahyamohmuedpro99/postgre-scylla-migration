@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: initdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  scylla-seed:
+    build:
+      context: .
+      dockerfile: Dockerfile-scylla
+    environment:
+      SCYLLA_CLUSTER_NAME: "my-scylla-cluster"
+      SCYLLA_SEEDS: "scylla-seed"
+    ports:
+      - "9042:9042"
+    command: --seeds=scylla-seed
+    volumes:
+      - scylladata-seed:/var/lib/scylla
+    networks:
+      scylla-net:
+        aliases:
+          - scylla-seed
+
+  scylla-node1:
+    build:
+      context: .
+      dockerfile: Dockerfile-scylla
+    environment:
+      SCYLLA_CLUSTER_NAME: "my-scylla-cluster"
+      SCYLLA_SEEDS: "scylla-seed"
+    command: --seeds=scylla-seed
+    volumes:
+      - scylladata-node1:/var/lib/scylla
+    networks:
+      scylla-net:
+        aliases:
+          - scylla-node1
+
+  scylla-node2:
+    build:
+      context: .
+      dockerfile: Dockerfile-scylla
+    environment:
+      SCYLLA_CLUSTER_NAME: "my-scylla-cluster"
+      SCYLLA_SEEDS: "scylla-seed"
+    command: --seeds=scylla-seed
+    volumes:
+      - scylladata-node2:/var/lib/scylla
+    networks:
+      scylla-net:
+        aliases:
+          - scylla-node2
+
+volumes:
+  pgdata:
+  scylladata-seed:
+  scylladata-node1:
+  scylladata-node2:
+
+networks:
+  scylla-net:
