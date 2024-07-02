@@ -1,3 +1,42 @@
+from dotenv import load_dotenv
+import os
+
+# -------------------------------------------
+# ---------------- load vars ----------------
+# -------------------------------------------
+
+load_dotenv()
+pg_pass=os.getenv('PG_PASS')
+pg_host=os.getenv('PG_HOST')
+scylla_host=os.getenv('SCYLLA_HOST')
+#-----------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------
+
+
+pg_config = {
+        'database': 'egabee',
+        'user': 'egabee',
+        'password': pg_pass,
+        'host': pg_host,
+        'port': '5432'
+    }
+
+scylla_config = {
+        'contact_points': [scylla_host],
+        'keyspace': 'egabee'
+    }
+
+#------ is reversed keywords --------- 
+column_mapping = {
+        'user_validation_codes': {
+            'token': 'token_'
+        },
+        'cosmwasm_contract': {
+            'schema': 'schema_'
+        }
+    }
+
+
 table_names = [
     "users",
     "projects",

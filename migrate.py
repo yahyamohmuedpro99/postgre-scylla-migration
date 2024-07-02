@@ -1,21 +1,19 @@
+import json
 import psycopg2
 from cassandra.cluster import Cluster
 import uuid
 from cassandra.query import PreparedStatement
 from datetime import datetime
-from dotenv import load_dotenv
-import os
-import json
-import logging
-from tables import table_names
 
-load_dotenv()
-pg_pass=os.getenv('PG_PASS')
-pg_host=os.getenv('PG_HOST')
-scylla_host=os.getenv('SCYLLA_HOST')
+import logging
+from tables import table_names,pg_config,column_mapping,scylla_config
 
 logging.basicConfig(level=logging.INFO)
 
+
+# ---------------------------------------------
+# ------------- DB's connection ---------------
+# ---------------------------------------------
 def get_postgres_connection(database, user, password, host, port):
     return psycopg2.connect(
         database=database,
@@ -28,6 +26,12 @@ def get_postgres_connection(database, user, password, host, port):
 def get_scylla_connection(contact_points, keyspace):
     return Cluster(contact_points).connect(keyspace)
 
+#-----------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------
+
+# ---------------------------------------------
+# ------------- get and insert data -----------
+# ---------------------------------------------
 def fetch_data_from_postgres(pg_cursor, table_name):
     pg_cursor.execute(f"SELECT * FROM {table_name}")
     columns = [desc[0] for desc in pg_cursor.description]
@@ -42,6 +46,7 @@ def prepare_and_insert_data_into_scylla(session, table_name, columns, rows, colu
 
     for row in rows:
         row_data = []
+        # do some handeling and checks for data bcz diff types 
         for i, value in enumerate(row):
             column = columns[i]
             if isinstance(value, uuid.UUID):
@@ -65,39 +70,18 @@ def prepare_and_insert_data_into_scylla(session, table_name, columns, rows, colu
         logging.info(f"Row data to insert: {row_data}")
         session.execute(prepared, row_data)
 
+
 def migrate_table(pg_cursor, scylla_session, table_name, column_mapping):
     columns, rows = fetch_data_from_postgres(pg_cursor, table_name)
     prepare_and_insert_data_into_scylla(scylla_session, table_name, columns, rows, column_mapping)
     print(f"Data from table {table_name} migrated successfully.")
 
 def main():
-    pg_config = {
-        'database': 'egabee',
-        'user': 'egabee',
-        'password': pg_pass,
-        'host': pg_host,
-        'port': '5432'
-    }
-
-    scylla_config = {
-        'contact_points': [scylla_host],
-        'keyspace': 'egabee'
-    }
-
-    column_mapping = {
-        'user_validation_codes': {
-            'token': 'token_'
-        },
-        'cosmwasm_contract': {
-            'schema': 'schema_'
-        }
-    }
 
     tables = table_names
 
     pg_conn = get_postgres_connection(**pg_config)
     pg_cursor = pg_conn.cursor()
-
     scylla_session = get_scylla_connection(scylla_config['contact_points'], scylla_config['keyspace'])
 
     for table in tables:
