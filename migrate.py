@@ -6,7 +6,7 @@ from cassandra.query import PreparedStatement
 from datetime import datetime
 
 import logging
-from tables import table_names,pg_config,column_mapping,scylla_config
+from tables import table_names, pg_config, column_mapping, scylla_config
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,8 +26,8 @@ def get_postgres_connection(database, user, password, host, port):
 def get_scylla_connection(contact_points, keyspace):
     return Cluster(contact_points).connect(keyspace)
 
-#-----------------------------------------------------------------------------------
-#-----------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------
 
 # ---------------------------------------------
 # ------------- get and insert data -----------
@@ -46,7 +46,7 @@ def prepare_and_insert_data_into_scylla(session, table_name, columns, rows, colu
 
     for row in rows:
         row_data = []
-        # do some handeling and checks for data bcz diff types 
+        # do some handling and checks for data because of different types 
         for i, value in enumerate(row):
             column = columns[i]
             if isinstance(value, uuid.UUID):
@@ -63,9 +63,15 @@ def prepare_and_insert_data_into_scylla(session, table_name, columns, rows, colu
             else:
                 row_data.append(value)
         
-        if any(pk is None or pk == '' for pk in row_data):
-            logging.warning(f"Skipping row with empty primary key: {row_data}")
-            continue
+        # Fill missing primary key values
+        for i, value in enumerate(row_data):
+            if value is None or value == '':
+                if isinstance(columns[i], uuid.UUID):
+                    row_data[i] = uuid.UUID(row_data[i]) or uuid.uuid4()
+                elif isinstance(columns[i], datetime):
+                    row_data[i] = datetime.date(row_data[i]) or datetime.now()  
+                else:
+                    row_data[i] = '' 
         
         logging.info(f"Row data to insert: {row_data}")
         session.execute(prepared, row_data)
