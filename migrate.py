@@ -72,8 +72,10 @@ def prepare_and_insert_data_into_scylla(session, table_name: str, columns: list,
                     row_data.append(value)
             elif isinstance(value, datetime):
                 row_data.append(value)
-            elif isinstance(value, list) or isinstance(value, dict):
-                row_data.append(json.dumps(value))  
+            elif isinstance(value, list):
+                row_data.append(value)
+            elif isinstance(value, dict):
+                row_data.append(json.dumps(value))
             elif column == 'max_sequencers':
                 try:
                     row_data.append(int(value))
